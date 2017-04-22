@@ -95,17 +95,17 @@ Augmentation functions were referenced from this [blog post ](https://chatbotsli
 
 The car has 3 different cameras, each with a different perspective. For each lap we would obtain 3 streams of data. We can use these left and the right cameras to simulate the car being off-centered in the road. For each of these images we can then propose a value for which it should steer to get back to the center of the lane. Too high a value and the car would be swerving through the track and if too low it would not be able to compensate enough to center itself in the lane. The amount of side-camera examples used in the data set was limited by a control value, as including all the examples resulted in the car constantly swerving from side to side and too little of these data and it would not know how to recover well from being off center.
 
-###### FLIP
+
 ![alt text][image3]
 
 As left turning bends are more prevalent than right bends in the training track, we use this augmentation to balance out the dataset and help increase the generalization of our model.
 
-###### TRANSLATION
+
 ![alt text][image5]
 
 Translates the image left and right to simulate the car being off center from the road. The amount of translation is scaled and summed to the steering value to encourage the car to compensate of the off-center behaviour.
 
-###### AFFINE TRANSFORMATION
+
 ![alt text][image4]
 
 To simulate more extreme turns and provide more examples for higher turning angles, horizontal affine transformations were applied to the images.
