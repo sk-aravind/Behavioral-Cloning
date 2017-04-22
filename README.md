@@ -15,6 +15,7 @@
 [image9]: ./Pics/model.png
 [image10]: ./Pics/multi-cam.png
 [image11]: ./Pics/steering_angles.png
+[image12]: ./Pics/dataset.png
 
 
 ![alt text][image1]
@@ -84,7 +85,14 @@ Model was trained locally on a Macbook with a GPU. It took about 5 Epochs to get
 
 ## __Data Augmentation__
 
-There are a few ways in which we can improve the performance of the car, one of which would be to simply generate more test data for specific cases by driving on the track. But I wanted to just work with the original data I was given, to simulate the lack of data in real life situations. So I choose the path of data augmentation.
+There are a few ways in which we can improve the performance of the car, one of which would be to simply generate more test data for specific cases by driving on the track. But I wanted to just work with the original dataset given by Udacity, to simulate the lack of data in real life situations. So I choose the path of data augmentation.
+
+###### ORIGINAL DRIVING DATA
+I have not added any new driving data to the original dataset provided by Udacity as I wanted to see how well I could work with what I have and augment the dataset to develop a better model.
+
+In most of the recorded instances of the data, the car is centered in the lane and it's center of vision is angled towards its desired location. Unlike recovery driving where your car's center of vision is not angled towards your future destination. As such the model trained just on the original dataset did not perform exceptionally when recovering from the edges of the road.
+
+![alt text][image12]
 
 The amount of each augmentation that is present in the data set was tuned based on how the car performed on the track. This was done using a random generator with a normal distribution coupled with a limit that I could change to specify how much of the data I want augmented with a certain function.
 
