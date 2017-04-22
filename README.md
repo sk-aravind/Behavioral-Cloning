@@ -1,55 +1,127 @@
-# Behaviorial Cloning Project
 
+
+# **Behavioral Cloning**
+## Utilizing Convolutional Neural Networks to Clone Driving Behaviors
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
-
-Overview
 ---
-This repository contains starting files for the Behavioral Cloning Project.
+[//]: # (Image References)
 
-In this project, you will use what you've learned about deep neural networks and convolutional neural networks to clone driving behavior. You will train, validate and test a model using Keras. The model will output a steering angle to an autonomous vehicle.
+[image1]: ./Pics/cover.gif
+[image2]: ./Pics/preprocess.png
+[image3]: ./Pics/mirror.png
+[image4]: ./Pics/transformation.png
+[image5]: ./Pics/translation.png
+[image6]: ./Pics/original_dist.png
+[image7]: ./Pics/augmented_data.png
+[image8]: ./Pics/nvidia.png
+[image9]: ./Pics/model.png
+[image10]: ./Pics/multi-cam.png
 
-We have provided a simulator where you can steer a car around a track for data collection. You'll use image data and steering angles to train a neural network and then use this model to drive the car autonomously around the track.
 
-We also want you to create a detailed writeup of the project. Check out the [writeup template](https://github.com/udacity/CarND-Behavioral-Cloning-P3/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup. The writeup can be either a markdown file or a pdf document.
+![alt text][image1]
+### Overview
 
-To meet specifications, the project will require submitting five files: 
-* model.py (script used to create and train the model)
-* drive.py (script to drive the car - feel free to modify this file)
-* model.h5 (a trained Keras model)
-* a report writeup file (either markdown or pdf)
-* video.mp4 (a video recording of your vehicle driving autonomously around the track for at least one full lap)
+###### OBJECTIVE
+Given the dash-cam of footage of a car we need to be able predict the steering angles in real-time to enable it to drive autonomously.
 
-This README file describes how to output the video in the "Details About Files In This Directory" section.
+###### APPROACH
+To achieve this we will be employing behavioral cloning. We start with a simulator built with Unity. We will drive through the track and collect data through the 3 onboard dash-cams, to record how a human navigates the track. This data will used to train our network. After which it will run in real-time to allow the vehicle to navigate the track autonomously.
 
-Creating a Great Writeup
+###### ISSUES
+This is a harder task to perfect than a classification problem. Due to these 2 reasons:
+
+* There is no accurate quantitative metric to analyze the performance of the model. A model may have an extremely low validation loss but it may not translate into great performance on the track or imply smooth driving. This is due to the fact that this model does not take into account temporal information like an RNN, so it does not take into account past steering angles. So most of the time, you would have to rely on qualitative observations on which parts of the track the model is not performing well and then proceed to improve your model accordingly.
+
+* Training Data has to be somewhat curated and intentionally generated, because it does not contain recovery driving. For example, if the human driver drove around the track while being centered in the middle of the road, the car would only know how to drive when its centered in the middle of the road. It would not know how to steer back to the center of the road when its along the road edges. So the original data only teaches it how to drive perfectly, it does not teach recovery driving. In the documentation below I will elaborate on the steps I took to fix this issue.
+
 ---
-A great writeup should include the [rubric points](https://review.udacity.com/#!/rubrics/432/view) as well as your description of how you addressed each point.  You should include a detailed description of the code used (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
+##  __Solution Design Approach__
 
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
+The overall strategy for deriving a model architecture was to start with a very simple model architecture and very small amount of data and try to achieve overfitting. If I could achieve overfitting with good test accuracy it would mean my data can be represented well with my model. This also allowed me to conduct many experiments on data augmentation and preprocessing very quickly and converge on what worked.
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
+## __Preprocessing__
 
-The Project
----
-The goals / steps of this project are the following:
-* Use the simulator to collect data of good driving behavior 
-* Design, train and validate a model that predicts a steering angle from image data
-* Use the model to drive the vehicle autonomously around the first track in the simulator. The vehicle should remain on the road for an entire loop around the track.
-* Summarize the results with a written report
+![alt text][image2]
 
-### Dependencies
-This lab requires:
+###### NORMALIZATION
+We normalize the input to minimize sensitivity and make the network more stable. Experimented with normalizing to [0,1] with mean shift of -0.5 but this delivered more favourable results.
+```python
+model.add(Lambda(lambda x: x / 127.5 - 1., input_shape=input_shape))
+```
 
-* [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
 
-The lab enviroment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
+###### COLOR SPACE
+I also decided to let the model learn what colorspace is best instead of manually specifying which colorspace to use. But previously experimented with sliced HSV colorspace with gaussian blur.
 
-The following resources can be found in this github repository:
-* drive.py
-* video.py
-* writeup_template.md
+```python
+model.add(Conv2D(3, kernel_size=(1, 1), strides=(1, 1), activation='linear'))
+```
 
-The simulator can be downloaded from the classroom. In the classroom, we have also provided sample data that you can optionally use to help train your model.
+###### CROP
+Cropped the image, to retain only the information relevant to steering angle decision making in that moment. Explored more aggressive cropping after reading David Ventimiglia in his [post](http://davidaventimiglia.com/carnd_behavioral_cloning_part1.html?fb_comment_id=1429370707086975_1432730663417646&comment_id=1432702413420471&reply_comment_id=1432730663417646#f2752653e047148), "For instance, if you have a neural network with no memory or anticipatory functions, you might downplay the importance of features within your data that contain information about the future as opposed to features that contain information about the present."
+
+```python
+model.add(Cropping2D(cropping=((80, 25), (0, 0))))
+```
+
+These processes are part of the keras model, so they are not only applied on the training data but also to the dash-cam images in real-time while in autonomous mode.
+
+
+## __Expanding Model Architecture__
+
+The basic model was able to navigate the track successfully, but the driving was not ideal as it would stray too far off center at times. So after reading the research paper by Nvidia on End to End learning for self-driving cars. I implemented their model with some slight tweaks to achieve a smoother driving experience.
+
+| Modified       | Nvidia           |
+| ------------- |:-------------:|
+| ![alt text][image9]  | ![alt text][image8] |
+
+My model was showing signs of overfitting as the mean squared error on the training set(80% of data) would drop lower than that of the validation set(20% of data).To combat the overfitting, I modified by increasing the dropout to 0.2, which increased its performance and stability.
+
+The Adam optimizer was chosen with default parameters and the chosen loss function was mean squared error (MSE).
+
+The next step was to run the simulator to see how well the car was driving around the track. The vehicle was able to keep on the road the entire time but was still underperforming at some corners and drifting too far out. At this point I had to use my intuition to augment the data in such a way that it could fix the behaviour of the car.
+
+###### TRAINING
+Model was trained locally on a Macbook with a GPU. It took about 5 Epochs to get a successful model.
+
+
+## __Data Augmentation__
+
+There were many ways in which i could fix this issue, one of which would be to simply generate more test data for specific cases by driving on the track. But I wanted to just work with the original data I was given, to simulate the lack of data in real life situations. So I choose the path of data augmentation.
+
+Referenced this [blog post ](https://chatbotslife.com/using-augmentation-to-mimic-human-driving-496b569760a9) by Vivek Yadav for the image augmentations
+
+###### MULTI CAMERA
+![alt text][image10]
+
+We are provided with screen-shots of the three cameras mounted in the car. We can use the left and the right cameras to simulate that the car is not on the centre of the image and so that it needs to steer to the centre. This data augmentation will help to keep the car in the centre of the line. Providing a correction angle too big and the car won’t be able to drive in a straight line, and providing a correction angle too low it won’t really help the correct the car from the sides to the centre of the lane.
+
+###### FLIP
+![alt text][image3]
+
+As left turning bends are more prevalent than right bends in the training track. Hence, in order to increase the generalization of our model, we flip images and their respective steering angles.
+
+###### TRANSLATION
+![alt text][image4]
+
+Translates the image left and right to simulate the car being off center from the road. The amount of translation is scaled and summed to the steering value to encourage the car to compensate of the off-center behaviour.
+
+###### AFFINE TRANSFORMATION
+![alt text][image5]
+
+
+## __Data Visualized__
+
+Because the test track includes long sections with very slight or no curvature, the data captured from it tends to be heavily skewed toward low and zero turning angles. This creates a problem for the neural network, which then becomes biased toward driving in a straight line and can become easily confused by sharp turns.
+
+![alt text][image6]
+
+augmented data
+![alt text][image7]
+This allowed for smoother transitions between steering angles.
+
+Data augmentation combined with the images from the 2 side cameras the vehicle was able to drive autonomously around the track in a smooth manner.
+
 
 ## Details About Files In This Directory
 
