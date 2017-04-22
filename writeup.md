@@ -1,6 +1,6 @@
 # **Behavioral Cloning**
-## _Utilizing Deep Convolutional Neural Networks to Clone Driving Behaviors_
----
+## Utilizing Deep Convolutional Neural Networks to Clone Driving Behaviors
+
 [//]: # (Image References)
 
 [image1]: ./Pics/cover.gif

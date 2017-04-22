@@ -1,7 +1,7 @@
 # **Behavioral Cloning**
-## _Utilizing Deep Convolutional Neural Networks to Clone Driving Behaviors_
+## Utilizing Deep Convolutional Neural Networks to Clone Driving Behaviors
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
----
+
 [//]: # (Image References)
 
 [image1]: ./Pics/cover.gif
@@ -32,7 +32,7 @@ This is a harder task to perfect than a classification problem. Due to these 2 r
 
 * Training Data has to be somewhat curated and intentionally generated, because it does not contain recovery driving. For example, if the human driver drove around the track while being centered in the middle of the road, the car would only know how to drive when its centered in the middle of the road. It would not know how to steer back to the center of the road when its along the road edges. So the original data only teaches it how to drive perfectly, it does not teach recovery driving. In the documentation below I will elaborate on the steps I took to fix this issue.
 
----
+
 ##  __Solution Design Approach__
 
 The overall strategy for deriving a model architecture was to start with a very simple model architecture and very small amount of data and try to achieve overfitting. If I could achieve overfitting with good test accuracy it would mean my data could be represented well with my model. This also allowed me to conduct many experiments on data augmentation and preprocessing very quickly and converge onto what worked.
