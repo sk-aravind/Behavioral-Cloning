@@ -1,7 +1,5 @@
-
-
 # **Behavioral Cloning**
-## Utilizing Convolutional Neural Networks to Clone Driving Behaviors
+## _Utilizing Deep Convolutional Neural Networks to Clone Driving Behaviors_
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 ---
 [//]: # (Image References)
@@ -16,11 +14,11 @@
 [image8]: ./Pics/nvidia.png
 [image9]: ./Pics/model.png
 [image10]: ./Pics/multi-cam.png
+[image11]: ./Pics/steering_angles.png
 
 
 ![alt text][image1]
-### Overview
-
+## __Overview__
 ###### OBJECTIVE
 Given the dash-cam of footage of a car we need to be able predict the steering angles in real-time to enable it to drive autonomously.
 
@@ -30,14 +28,14 @@ To achieve this we will be employing behavioral cloning. We start with a simulat
 ###### ISSUES
 This is a harder task to perfect than a classification problem. Due to these 2 reasons:
 
-* There is no accurate quantitative metric to analyze the performance of the model. A model may have an extremely low validation loss but it may not translate into great performance on the track or imply smooth driving. This is due to the fact that this model does not take into account temporal information like an RNN, so it does not take into account past steering angles. So most of the time, you would have to rely on qualitative observations on which parts of the track the model is not performing well and then proceed to improve your model accordingly.
+* There is no accurate quantitative metric to analyze the performance of the model. A model may have an extremely low validation loss but it may not translate into great performance on the track or imply smooth driving. This is due to the fact that this model does not take into account temporal information like an RNN, so it does not take into account past steering angles. So most of the time, you would have to rely on qualitative observations on which parts of the track the model is not performing well and then proceed to improve your model/data accordingly.
 
 * Training Data has to be somewhat curated and intentionally generated, because it does not contain recovery driving. For example, if the human driver drove around the track while being centered in the middle of the road, the car would only know how to drive when its centered in the middle of the road. It would not know how to steer back to the center of the road when its along the road edges. So the original data only teaches it how to drive perfectly, it does not teach recovery driving. In the documentation below I will elaborate on the steps I took to fix this issue.
 
 ---
 ##  __Solution Design Approach__
 
-The overall strategy for deriving a model architecture was to start with a very simple model architecture and very small amount of data and try to achieve overfitting. If I could achieve overfitting with good test accuracy it would mean my data can be represented well with my model. This also allowed me to conduct many experiments on data augmentation and preprocessing very quickly and converge on what worked.
+The overall strategy for deriving a model architecture was to start with a very simple model architecture and very small amount of data and try to achieve overfitting. If I could achieve overfitting with good test accuracy it would mean my data could be represented well with my model. This also allowed me to conduct many experiments on data augmentation and preprocessing very quickly and converge onto what worked.
 
 ## __Preprocessing__
 
@@ -51,14 +49,14 @@ model.add(Lambda(lambda x: x / 127.5 - 1., input_shape=input_shape))
 
 
 ###### COLOR SPACE
-I also decided to let the model learn what colorspace is best instead of manually specifying which colorspace to use. But previously experimented with sliced HSV colorspace with gaussian blur.
+I also decided to let the model learn what colorspace is best instead of manually specifying which colorspace to use. Previously experimented with sliced HSV colorspace followed by gaussian blur of kernel_size 5.
 
 ```python
 model.add(Conv2D(3, kernel_size=(1, 1), strides=(1, 1), activation='linear'))
 ```
 
 ###### CROP
-Cropped the image, to retain only the information relevant to steering angle decision making in that moment. Explored more aggressive cropping after reading David Ventimiglia in his [post](http://davidaventimiglia.com/carnd_behavioral_cloning_part1.html?fb_comment_id=1429370707086975_1432730663417646&comment_id=1432702413420471&reply_comment_id=1432730663417646#f2752653e047148), "For instance, if you have a neural network with no memory or anticipatory functions, you might downplay the importance of features within your data that contain information about the future as opposed to features that contain information about the present."
+Cropped the image, to retain only the information relevant to steering angle decision making in that moment. Explored more aggressive cropping after reading David Ventimiglia in his [post](http://davidaventimiglia.com/carnd_behavioral_cloning_part1.html?fb_comment_id=1429370707086975_1432730663417646&comment_id=1432702413420471&reply_comment_id=1432730663417646#f2752653e047148) which he mentioned, "For instance, if you have a neural network with no memory or anticipatory functions, you might downplay the importance of features within your data that contain information about the future as opposed to features that contain information about the present."
 
 ```python
 model.add(Cropping2D(cropping=((80, 25), (0, 0))))
@@ -79,48 +77,80 @@ My model was showing signs of overfitting as the mean squared error on the train
 
 The Adam optimizer was chosen with default parameters and the chosen loss function was mean squared error (MSE).
 
-The next step was to run the simulator to see how well the car was driving around the track. The vehicle was able to keep on the road the entire time but was still underperforming at some corners and drifting too far out. At this point I had to use my intuition to augment the data in such a way that it could fix the behaviour of the car.
+The next step was to run the simulator to see how well the car was driving around the track. The vehicle was able to stay on the road the entire time but was still underperforming at some corners and drifting too far out. At this point I had to use my intuition to augment the data in such a way that it could fix the behaviour of the car.
 
 ###### TRAINING
 Model was trained locally on a Macbook with a GPU. It took about 5 Epochs to get a successful model.
 
-
 ## __Data Augmentation__
 
-There were many ways in which i could fix this issue, one of which would be to simply generate more test data for specific cases by driving on the track. But I wanted to just work with the original data I was given, to simulate the lack of data in real life situations. So I choose the path of data augmentation.
+There are a few ways in which we can improve the performance of the car, one of which would be to simply generate more test data for specific cases by driving on the track. But I wanted to just work with the original data I was given, to simulate the lack of data in real life situations. So I choose the path of data augmentation.
 
-Referenced this [blog post ](https://chatbotslife.com/using-augmentation-to-mimic-human-driving-496b569760a9) by Vivek Yadav for the image augmentations
+The amount of each augmentation that is present in the data set was tuned based on how the car performed on the track. This was done using a random generator with a normal distribution coupled with a limit that I could change to specify how much of the data I want augmented with a certain function.
+
+Augmentation functions were referenced from this [blog post ](https://chatbotslife.com/using-augmentation-to-mimic-human-driving-496b569760a9) by Vivek Yadav.
 
 ###### MULTI CAMERA
 ![alt text][image10]
 
-We are provided with screen-shots of the three cameras mounted in the car. We can use the left and the right cameras to simulate that the car is not on the centre of the image and so that it needs to steer to the centre. This data augmentation will help to keep the car in the centre of the line. Providing a correction angle too big and the car won’t be able to drive in a straight line, and providing a correction angle too low it won’t really help the correct the car from the sides to the centre of the lane.
+The car has 3 different cameras, each with a different perspective. For each lap we would obtain 3 streams of data. We can use these left and the right cameras to simulate the car being off-centered in the road. For each of these images we can then propose a value for which it should steer to get back to the center of the lane. Too high a value and the car would be swerving through the track and if too low it would not be able to compensate enough to center itself in the lane. The amount of side-camera examples used in the data set was limited by a control value, as including all the examples resulted in the car constantly swerving from side to side and too little of these data and it would not know how to recover well from being off center.
 
 ###### FLIP
 ![alt text][image3]
 
-As left turning bends are more prevalent than right bends in the training track. Hence, in order to increase the generalization of our model, we flip images and their respective steering angles.
+As left turning bends are more prevalent than right bends in the training track, we use this augmentation to balance out the dataset and help increase the generalization of our model.
 
 ###### TRANSLATION
-![alt text][image4]
+![alt text][image5]
 
 Translates the image left and right to simulate the car being off center from the road. The amount of translation is scaled and summed to the steering value to encourage the car to compensate of the off-center behaviour.
 
 ###### AFFINE TRANSFORMATION
-![alt text][image5]
+![alt text][image4]
 
+To simulate more extreme turns and provide more examples for higher turning angles, horizontal affine transformations were applied to the images.
 
 ## __Data Visualized__
 
-Because the test track includes long sections with very slight or no curvature, the data captured from it tends to be heavily skewed toward low and zero turning angles. This creates a problem for the neural network, which then becomes biased toward driving in a straight line and can become easily confused by sharp turns.
 
+As seen from the data plot below the steering angles are  heavily skewed toward low and zero turning angles. This is due to the nature of the track as it includes long sections with very slight or no curvature. This is not ideal for the neural network as it becomes heavily biased towards driving straight or at low angles and may by unable to handle sharp corners.
+
+It is also notable that the steering angles jump from value to value that may cause jerky turns as compared to a smooth and consistent turn.
+
+###### _Normal Scale and Log Scale Graphs_
 ![alt text][image6]
 
-augmented data
-![alt text][image7]
-This allowed for smoother transitions between steering angles.
+After augmenting the data we now have a more balanced dataset with more examples for higher turning values and intermediate turning values. This results in a more dense representation of the spectrum of turning values which helped in enabling smoother transitions between steering angles while driving.
 
-Data augmentation combined with the images from the 2 side cameras the vehicle was able to drive autonomously around the track in a smooth manner.
+###### _Normal Scale and Log Graphs_
+![alt text][image7]
+
+## __Conclusion__
+
+Aggressive dropout combined with controlled data augmentation resulted in the best performing model that enabled the vehicle to drive autonomously around the track in a smooth manner.
+
+###### DATA
+Understanding the original data distribution was essential. However understanding how to change the distribution to fix certain driving situation failures was crucial.
+
+As images were obtained from a video stream it would be beneficial to remove very similar images and steering values to increase the quality of the data, especially during the long straight portions of the track.
+
+###### AUGMENTATION
+Applying augmentations evenly through the data yielded good results. However in order to obtain desired behaviors we can control how much of the data is augmented by a certain function. As an abundance of some of the generated data actually had a negative impact on the network. We also control how much of the overall data is augmented. This step helped to stabilize the model greatly.
+
+###### QUANTITATIVE METRIC
+Would like to try and experiment with steering value comparisons. To compare the predicted steering value with the averaged steering value through the track. This would be a good metric to represent how much of the drivers behaviour is actually cloned.
+
+###### *Original Driver's Steering Angles*
+![alt text][image11]
+
+###### FURTHER IMPROVEMENTS
+For a more robust solution one should consider including temporal information as part of the model as driving is not just about instantaneous decisions based solely on the scene, it requires context and past steering values to normalize the behaviours.
+
+Currently one dataset provides both the steering angles for scenes and also the driving logic. Humans learn the steering angles through visual recognition and intuition, but our driving behaviour is shaped by a set of rules and expectations that are pre-defined. It would be interesting to see how we can automate the learning of such driving rules, to create a driving model that is more familiar to humans.
+
+Another suggestion would be more dash-cams at different parts of the car (which are trained to recognize different type of scene's) to increase the confidence of steering predictions.
+
+Reinforcement Learning!!! Using a fitness function that rewards the car for staying centered on the road and reduces in reward the further away you drift from the center.
 
 
 ## Details About Files In This Directory
