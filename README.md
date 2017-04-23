@@ -80,8 +80,6 @@ The Adam optimizer was chosen with default parameters and the chosen loss functi
 
 The next step was to run the simulator to see how well the car was driving around the track. The vehicle was able to stay on the road the entire time but was still underperforming at some corners and drifting too far out. At this point I had to use my intuition to augment the data in such a way that it could fix the behaviour of the car.
 
-###### TRAINING
-Model was trained locally on a Macbook with a GPU. It took about 5 Epochs to get a successful model.
 
 ## __Data Augmentation__
 
@@ -100,7 +98,7 @@ Augmentation functions were referenced from this [blog post ](https://chatbotsli
 ###### MULTI CAMERA
 ![alt text][image10]
 
-The car has 3 different cameras, each with a different perspective. For each lap we would obtain 3 streams of data. We can use these left and the right cameras to simulate the car being off-centered in the road. For each of these images we can then propose a value for which it should steer to get back to the center of the lane. Too high a value and the car would be swerving through the track and if too low it would not be able to compensate enough to center itself in the lane. The amount of side-camera examples used in the data set was limited by a control value, as including all the examples resulted in the car constantly swerving from side to side and too little of these data and it would not know how to recover well from being off center.
+The car has 3 different cameras, each with a different perspective. For each lap we would obtain 3 streams of data. We can use these left and the right cameras to simulate the car being off-centered in the road. For each of these images we can then propose a value for which it should steer to get back to the center of the lane. Too high a value and the car would be swerving through the track and if too low it would not be able to compensate enough to center itself in the lane.
 
 
 ![alt text][image3]
@@ -116,6 +114,22 @@ Translates the image left and right to simulate the car being off center from th
 ![alt text][image4]
 
 To simulate more extreme turns and provide more examples for higher turning angles, horizontal affine transformations were applied to the images. The amount by which it was transformed was scaled and summed to the steering angle. Similarly we can notice that the center of vision of the car is no longer it's desired future destination.
+
+## __Python Generator For Dynamic Memory Allocation__
+
+With these new augmentations in place the size of the dataset grew four-fold. Loading all the generated images simultaneously could prove computationally expensive. A better approach is to load only a subset of the required images. Process and augment them on the fly and present them in batches to the model through python's yield functionality.The full code won’t be executed when the function is called. Instead the code will be executed until it reaches a yield, return those values and iterate again until there are no more values to return.
+
+There are two generators, 'augmented_generator' which feeds the model a mixture of augmented and un-augmented data and is used as the training set and the 'generator' which feeds un-augmented data to the validation set.
+
+The augmented_generator is designed such a way that we can control the type and amount of data that is being generated to optimize the performance of our model, while preserving randomness. This is achieved by using a random normal distribution generator and controlling the limits with parameters. Which allows us to define approximate percentages while maintaining randomness, to simulate real data.
+
+The reason for limiting the amount of certain cameras and augmentations is that in excess they can lead to negative effects on the performance of the car. Such as a "drunk driving", where the car is able to navigate the track but constantly swerves left and right trying to perfectly center itself. Too little of this data and the car can't recover and center itself.
+
+Also If steering angles are greater than 0.3 we would flip the image. As we only want to flip images where the car is turning as this helps to reduce bias toward low and zero turning angles, as well as balance out the biased turning direction so neither left nor right turning angles become overrepresented.
+
+I have also included model_no_generator.py which works without the generator. It augments and processes all the data before hand. Which can serve as a sanity check on the augmented data to help in debugging.  
+
+
 
 ## __Data Visualized__
 
