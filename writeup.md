@@ -121,13 +121,13 @@ With these new augmentations in place the size of the dataset grew four-fold. Lo
 
 There are two generators, 'augmented_generator' which feeds the model a mixture of augmented and un-augmented data and is used as the training set and the 'generator' which feeds un-augmented data to the validation set.
 
-The augmented_generator is designed such a way that we can control the type and amount of data that is being generated to optimize the performance of our model, while preserving randomness. This is achieved by using a random normal distribution generator and controlling the limits with parameters. Which allows us to define approximate percentages while maintaining randomness, to simulate real data.
+The augmented_generator is designed such a way that we can control the type and amount of data that is being generated to optimize the performance of our model, while preserving randomness. This is achieved by using a random normal distribution generator coupled with a variable limit. The limit decides how often the type of data will be included in each batch. Which allows us to define approximate percentages while maintaining randomness, to simulate real data.
 
 The reason for limiting the amount of certain cameras and augmentations is that in excess they can lead to negative effects on the performance of the car. Such as a "drunk driving", where the car is able to navigate the track but constantly swerves left and right trying to perfectly center itself. Too little of this data and the car can't recover and center itself.
 
 Also If steering angles are greater than 0.3 we would flip the image. As we only want to flip images where the car is turning as this helps to reduce bias toward low and zero turning angles, as well as balance out the biased turning direction so neither left nor right turning angles become overrepresented.
 
-I have also included model_no_generator.py which works without the generator. It augments and processes all the data before hand. Which can serve as a sanity check on the augmented data to help in debugging.  
+I have also included model_no_generator.py which works without the generator. It augments and processes all the data before hand. Which can serve as a sanity check on the augmented data to help in debugging.
 
 
 
