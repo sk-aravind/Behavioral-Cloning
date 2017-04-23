@@ -50,6 +50,8 @@ with open('./data/driving_log.csv') as csvfile:
 train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 
 
+# Returns batch_size amount of features and labels using yield
+# Contains Augmented and Unaugmented Data
 def augmented_generator(samples, batch_size):
     num_samples = len(samples)
     while 1: # Loop forever so the generator never terminates
@@ -93,16 +95,17 @@ def augmented_generator(samples, batch_size):
                     images.append(center_image)
                     measurements.append(center_angle)
 
-                # Yield once batch size has been fulfilled 
+                # Yield once batch size has been fulfilled
                 if len(measurements) >=  batch_size:
                     X_train = np.array(images)
                     y_train = np.array(measurements)
 
                     yield shuffle(X_train, y_train)
-            
 
 
 
+# Returns batch_size amount of features and labels using yield
+# Contains only Unaugmented Data
 def generator(samples, batch_size):
     num_samples = len(samples)
 
