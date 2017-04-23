@@ -1,12 +1,51 @@
 import cv2
 import numpy as np
+import csv
 
-###================== Helper Functions ==================###
+
+###=====================================================###
+###================== Hyperparameters ==================###
+###=====================================================###
+
+# Parameters that determine amount for each type of augmentation
+
+translation_limit = 0.6
+
+
+###=====================================================###
+###================== Helper functions =================###
+###=====================================================###
+
 
 def get_file_name(full_path):
     return ("./data/IMG/" + full_path.split('/')[-1])
 
-###================== Augmentation Functions ==================###
+def load_data_samples(folders=[]):
+    """Load data from provided data folders"""
+    recorded_base_path = './data/recorded/'
+    recorded_log_file = 'driving_log.csv'
+    recorded_image_path = '/IMG/'
+
+    samples = []
+    for folder in folders:
+        log_file = recorded_base_path + folder + '/' + recorded_log_file
+
+        with open(log_file) as csvfile:
+            reader = csv.reader(csvfile)
+            for line in reader:
+                line[0] = recorded_base_path + folder + recorded_image_path + line[0].split('/')[-1]
+                line[1] = recorded_base_path + folder + recorded_image_path + line[1].split('/')[-1]
+                line[2] = recorded_base_path + folder + recorded_image_path + line[2].split('/')[-1]
+
+                samples.append(line)
+
+    return samples
+
+
+###=====================================================###
+###============== Augmentation functions ===============###
+###=====================================================###
+
 
 def mirror(feature, label=None):
     '''
@@ -76,9 +115,8 @@ def augment_data(feature,label):
     Percentage of each augmentation is controlled by the limits in the if statement
     This allows us to easily tweak our dataset to fix problems in driving behaviours
     '''
-    if np.random.normal(0.5, 0.5) < 0.8 :
-        feature,label = mirror(feature,label)
-    if np.random.normal(0.5, 0.5) < 0.65:
+
+    if np.random.normal(0.5, 0.5) < translation_limit:
         feature,label = translate(feature,label)
     else:
         feature,label = random_affine_transformation(feature,label)
