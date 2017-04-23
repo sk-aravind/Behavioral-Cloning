@@ -85,10 +85,9 @@ Model was trained locally on a Macbook with a GPU. It took about 5 Epochs to get
 
 ## __Data Augmentation__
 
-There are a few ways in which we can improve the performance of the car, one of which would be to simply generate more test data for specific cases by driving on the track. But I wanted to just work with the original dataset given by Udacity, to simulate the lack of data in real life situations. So I choose the path of data augmentation.
+There are a few ways in which we can improve the performance of the car, one of which would be to simply generate more test data for specific cases by driving on the track. But I wanted to just work with the original dataset given by Udacity, as I wanted to see how well I could work with what I have and augment the dataset to develop a better model. So I choose the path of data augmentation.
 
 ###### ORIGINAL DRIVING DATA
-I have not added any new driving data to the original dataset provided by Udacity as I wanted to see how well I could work with what I have and augment the dataset to develop a better model.
 
 In most of the recorded instances of the data, the car is centered in the lane and it's center of vision is angled towards its desired location. Unlike recovery driving where your car's center of vision is not angled towards your future destination. As such the model trained just on the original dataset did not perform exceptionally when recovering from the edges of the road.
 
@@ -111,12 +110,12 @@ As left turning bends are more prevalent than right bends in the training track,
 
 ![alt text][image5]
 
-Translates the image left and right to simulate the car being off center from the road. The amount of translation is scaled and summed to the steering value to encourage the car to compensate of the off-center behaviour.
+Translates the image left and right to simulate the car being off center from the road. After augmentation the center of vision of the car is no longer it's desired future destination. The amount of translation is scaled and summed to the steering value to encourage the car to compensate of the off-center behaviour. This also helps the car realign itself if it stray's from the desired path.
 
 
 ![alt text][image4]
 
-To simulate more extreme turns and provide more examples for higher turning angles, horizontal affine transformations were applied to the images.
+To simulate more extreme turns and provide more examples for higher turning angles, horizontal affine transformations were applied to the images. The amount by which it was transformed was scaled and summed to the steering angle. Similarly we can notice that the center of vision of the car is no longer it's desired future destination.
 
 ## __Data Visualized__
 
