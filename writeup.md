@@ -1,5 +1,6 @@
 # **Behavioral Cloning**
 ## Utilizing Deep Convolutional Neural Networks to Clone Driving Behaviors
+[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
 [//]: # (Image References)
 
@@ -14,6 +15,7 @@
 [image9]: ./Pics/model.png
 [image10]: ./Pics/multi-cam.png
 [image11]: ./Pics/steering_angles.png
+[image12]: ./Pics/dataset.png
 
 
 ![alt text][image1]
@@ -31,7 +33,7 @@ This is a harder task to perfect than a classification problem. Due to these 2 r
 
 * Training Data has to be somewhat curated and intentionally generated, because it does not contain recovery driving. For example, if the human driver drove around the track while being centered in the middle of the road, the car would only know how to drive when its centered in the middle of the road. It would not know how to steer back to the center of the road when its along the road edges. So the original data only teaches it how to drive perfectly, it does not teach recovery driving. In the documentation below I will elaborate on the steps I took to fix this issue.
 
----
+
 ##  __Solution Design Approach__
 
 The overall strategy for deriving a model architecture was to start with a very simple model architecture and very small amount of data and try to achieve overfitting. If I could achieve overfitting with good test accuracy it would mean my data could be represented well with my model. This also allowed me to conduct many experiments on data augmentation and preprocessing very quickly and converge onto what worked.
@@ -78,12 +80,16 @@ The Adam optimizer was chosen with default parameters and the chosen loss functi
 
 The next step was to run the simulator to see how well the car was driving around the track. The vehicle was able to stay on the road the entire time but was still underperforming at some corners and drifting too far out. At this point I had to use my intuition to augment the data in such a way that it could fix the behaviour of the car.
 
-###### TRAINING
-Model was trained locally on a Macbook with a GPU. It took about 5 Epochs to get a successful model.
 
 ## __Data Augmentation__
 
-There are a few ways in which we can improve the performance of the car, one of which would be to simply generate more test data for specific cases by driving on the track. But I wanted to just work with the original data I was given, to simulate the lack of data in real life situations. So I choose the path of data augmentation.
+There are a few ways in which we can improve the performance of the car, one of which would be to simply generate more test data for specific cases by driving on the track. But I wanted to just work with the original dataset given by Udacity, as I wanted to see how well I could work with what I have and augment the dataset to develop a better model. So I choose the path of data augmentation.
+
+###### ORIGINAL DRIVING DATA
+
+In most of the recorded instances of the data, the car is centered in the lane and it's center of vision is angled towards its desired location. Unlike recovery driving where your car's center of vision is not angled towards your future destination. As such the model trained just on the original dataset did not perform exceptionally when recovering from the edges of the road.
+
+![alt text][image12]
 
 The amount of each augmentation that is present in the data set was tuned based on how the car performed on the track. This was done using a random generator with a normal distribution coupled with a limit that I could change to specify how much of the data I want augmented with a certain function.
 
@@ -92,8 +98,7 @@ Augmentation functions were referenced from this [blog post ](https://chatbotsli
 ###### MULTI CAMERA
 ![alt text][image10]
 
-The car has 3 different cameras, each with a different perspective. For each lap we would obtain 3 streams of data. We can use these left and the right cameras to simulate the car being off-centered in the road. For each of these images we can then propose a value for which it should steer to get back to the center of the lane. Too high a value and the car would be swerving through the track and if too low it would not be able to compensate enough to center itself in the lane. The amount of side-camera examples used in the data set was limited by a control value, as including all the examples resulted in the car constantly swerving from side to side and too little of these data and it would not know how to recover well from being off center.
-
+The car has 3 different cameras, each with a different perspective. For each lap we would obtain 3 streams of data. We can use these left and the right cameras to simulate the car being off-centered in the road. For each of these images we can then propose a value for which it should steer to get back to the center of the lane. Too high a value and the car would be swerving through the track and if too low it would not be able to compensate enough to center itself in the lane.
 
 
 ![alt text][image3]
@@ -101,15 +106,30 @@ The car has 3 different cameras, each with a different perspective. For each lap
 As left turning bends are more prevalent than right bends in the training track, we use this augmentation to balance out the dataset and help increase the generalization of our model.
 
 
-
 ![alt text][image5]
 
-Translates the image left and right to simulate the car being off center from the road. The amount of translation is scaled and summed to the steering value to encourage the car to compensate of the off-center behaviour.
+Translates the image left and right to simulate the car being off center from the road. After augmentation the center of vision of the car is no longer it's desired future destination. The amount of translation is scaled and summed to the steering value to encourage the car to compensate of the off-center behaviour. This also helps the car realign itself if it stray's from the desired path.
 
 
 ![alt text][image4]
 
-To simulate more extreme turns and provide more examples for higher turning angles, horizontal affine transformations were applied to the images.
+To simulate more extreme turns and provide more examples for higher turning angles, horizontal affine transformations were applied to the images. The amount by which it was transformed was scaled and summed to the steering angle. Similarly we can notice that the center of vision of the car is no longer it's desired future destination.
+
+## __Python Generator For Dynamic Memory Allocation__
+
+With these new augmentations in place the size of the dataset grew four-fold. Loading all the generated images simultaneously could prove computationally expensive. A better approach is to load only a subset of the required images. Process and augment them on the fly and present them in batches to the model through python's yield functionality.The full code won’t be executed when the function is called. Instead the code will be executed until it reaches a yield, return those values and iterate again until there are no more values to return.
+
+There are two generators, 'augmented_generator' which feeds the model a mixture of augmented and un-augmented data and is used as the training set and the 'generator' which feeds un-augmented data to the validation set.
+
+The augmented_generator is designed such a way that we can control the type and amount of data that is being generated to optimize the performance of our model, while preserving randomness. This is achieved by using a random normal distribution generator and controlling the limits with parameters. Which allows us to define approximate percentages while maintaining randomness, to simulate real data.
+
+The reason for limiting the amount of certain cameras and augmentations is that in excess they can lead to negative effects on the performance of the car. Such as a "drunk driving", where the car is able to navigate the track but constantly swerves left and right trying to perfectly center itself. Too little of this data and the car can't recover and center itself.
+
+Also If steering angles are greater than 0.3 we would flip the image. As we only want to flip images where the car is turning as this helps to reduce bias toward low and zero turning angles, as well as balance out the biased turning direction so neither left nor right turning angles become overrepresented.
+
+I have also included model_no_generator.py which works without the generator. It augments and processes all the data before hand. Which can serve as a sanity check on the augmented data to help in debugging.  
+
+
 
 ## __Data Visualized__
 
@@ -152,3 +172,70 @@ Currently one dataset provides both the steering angles for scenes and also the 
 Another suggestion would be more dash-cams at different parts of the car (which are trained to recognize different type of scene's) to increase the confidence of steering predictions.
 
 Reinforcement Learning!!! Using a fitness function that rewards the car for staying centered on the road and reduces in reward the further away you drift from the center.
+
+
+## Details About Files In This Directory
+
+### `drive.py`
+
+Usage of `drive.py` requires you have saved the trained model as an h5 file, i.e. `model.h5`. See the [Keras documentation](https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model) for how to create this file using the following command:
+```sh
+model.save(filepath)
+```
+
+Once the model has been saved, it can be used with drive.py using this command:
+
+```sh
+python drive.py model.h5
+```
+
+The above command will load the trained model and use the model to make predictions on individual images in real-time and send the predicted angle back to the server via a websocket connection.
+
+Note: There is known local system's setting issue with replacing "," with "." when using drive.py. When this happens it can make predicted steering values clipped to max/min values. If this occurs, a known fix for this is to add "export LANG=en_US.utf8" to the bashrc file.
+
+#### Saving a video of the autonomous agent
+
+```sh
+python drive.py model.h5 run1
+```
+
+The fourth argument `run1` is the directory to save the images seen by the agent to. If the directory already exists it'll be overwritten.
+
+```sh
+ls run1
+
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_424.jpg
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_451.jpg
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_477.jpg
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_528.jpg
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_573.jpg
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_618.jpg
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_697.jpg
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_723.jpg
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_749.jpg
+[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_817.jpg
+...
+```
+
+The image file name is a timestamp when the image image was seen. This information is used by `video.py` to create a chronological video of the agent driving.
+
+### `video.py`
+
+```sh
+python video.py run1
+```
+
+Create a video based on images found in the `run1` directory. The name of the video will be name of the directory following by `'.mp4'`, so, in this case the video will be `run1.mp4`.
+
+Optionally one can specify the FPS (frames per second) of the video:
+
+```sh
+python video.py run1 --fps 48
+```
+
+The video will run at 48 FPS. The default FPS is 60.
+
+#### Why create a video
+
+1. It's been noted the simulator might perform differently based on the hardware. So if your model drives succesfully on your machine it might not on another machine (your reviewer). Saving a video is a solid backup in case this happens.
+2. You could slightly alter the code in `drive.py` and/or `video.py` to create a video of what your model sees after the image is processed (may be helpful for debugging).
